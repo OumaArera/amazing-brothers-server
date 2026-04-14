@@ -1,11 +1,13 @@
 from rest_framework.views import APIView
+from datetime import datetime
 from rest_framework.response import Response
 from rest_framework_simplejwt.views import TokenViewBase
-from rest_framework import permissions
+from rest_framework import permissions, status
 from django.contrib.auth.tokens import default_token_generator
 from django.contrib.auth import get_user_model
 from ..serializers import *
 from ..utils import get_tokens_for_user
+from ...common import StandardResultsSetPagination
 
 
 User = get_user_model()
@@ -74,7 +76,25 @@ class ChangePasswordView(APIView):
         return Response({"message": "Password changed successfully"})
 
 
+# class ForgotPasswordView(APIView):
+#     def post(self, request):
+#         serializer = ForgotPasswordSerializer(data=request.data)
+#         serializer.is_valid(raise_exception=True)
+
+#         try:
+#             user = User.objects.get(email=serializer.validated_data["email"])
+#         except User.DoesNotExist:
+#             return Response({"message": "If email exists, reset link sent"})
+
+#         token = default_token_generator.make_token(user)
+
+#         return Response({
+#             "uid": user.pk,
+#             "token": token
+#         })
+
 class ForgotPasswordView(APIView):
+    permission_classes = [permissions.AllowAny]
     def post(self, request):
         serializer = ForgotPasswordSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -82,17 +102,24 @@ class ForgotPasswordView(APIView):
         try:
             user = User.objects.get(email=serializer.validated_data["email"])
         except User.DoesNotExist:
-            return Response({"message": "If email exists, reset link sent"})
+            return Response(
+                {"message": "If email exists, reset processed"},
+                status=status.HTTP_200_OK
+            )
 
-        token = default_token_generator.make_token(user)
+        current_year = datetime.now().year
+        new_password = f"!Password{current_year}"
+        print("Pass: ", new_password)
+        user.set_password(new_password)
+        user.save()
 
         return Response({
-            "uid": user.pk,
-            "token": token
-        })
-
+            "message": "Password reset successful",
+            "new_password": new_password
+        }, status=status.HTTP_200_OK)
 
 class ResetPasswordView(APIView):
+    permission_classes = [permissions.AllowAny]
     def post(self, request, uid, token):
         try:
             user = User.objects.get(pk=uid)
@@ -114,3 +141,17 @@ class ResetPasswordView(APIView):
 class CustomTokenRefreshView(TokenViewBase):
     serializer_class = CustomTokenRefreshSerializer
 
+
+class UsersListView(APIView):
+    # permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request):
+        """
+        Get all users, paginated.
+        """
+        users = User.objects.all().order_by("-created_at")
+        paginator = StandardResultsSetPagination()
+        page = paginator.paginate_queryset(users, request)
+        serializer = UserSerializer(page, many=True)
+        return paginator.get_paginated_response(serializer.data)
