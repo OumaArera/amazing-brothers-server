@@ -14,12 +14,22 @@ class LeaveRequestListCreateView(generics.ListCreateAPIView):
     def get_queryset(self):
         user = self.request.user
 
-        # Users only see their own requests
-        queryset = LeaveRequest.objects.filter(staff=user).order_by("-created_at")
+        # Base queryset
+        queryset = LeaveRequest.objects.all().order_by("-created_at")
 
+        # Role-based filtering
+        if not (user.is_staff or getattr(user, "role", None) in ["admin", "supervisor"]):
+            queryset = queryset.filter(staff=user)
+
+        # Optional filters
         status_filter = self.request.query_params.get("status")
+        staff_filter = self.request.query_params.get("staff")
+
         if status_filter:
             queryset = queryset.filter(status=status_filter)
+
+        if staff_filter and (user.is_staff or getattr(user, "role", None) in ["admin", "supervisor"]):
+            queryset = queryset.filter(staff__id=staff_filter)
 
         return queryset
 
