@@ -48,5 +48,7 @@ urlpatterns = [
     path("assessments/<uuid:pk>/", AssessmentDetailView.as_view(), name="assessment-detail"),
     path("sleep-patterns/", SleepPatternListCreateView.as_view(), name="sleep-pattern-list"),
     path("sleep-patterns/<uuid:pk>/", SleepPatternDetailView.as_view(), name="sleep-pattern-detail"),
+    path("dashboard/caregiver/", CaregiverDashboardView.as_view(), name="dashboard-caregiver"),
+    path("dashboard/manager/",   ManagerDashboardView.as_view(),   name="dashboard-manager"),
 
 ]

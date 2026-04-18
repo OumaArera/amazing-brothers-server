@@ -13,4 +13,5 @@ from .grocery import *
 from .utility import *
 from .assessment import *
 from .sleep import *
+from .dashboard import *
 
